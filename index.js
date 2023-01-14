@@ -23,6 +23,7 @@ async function run(){
         await client.connect();
         const database = client.db("doctors_database");
         const ServiceCollection = database.collection("services");
+        const bookingCollection=database.collection('booking');
         app.get('/service',async(req,res)=>{
             const query={};
             const cursor=ServiceCollection.find(query);
@@ -30,6 +31,33 @@ async function run(){
             res.send(services);
         })
 
+        app.get("/available",async(req,res)=>{
+            const date=req.query.date ||'January 14, 2023';
+
+            // step:1:get all services
+            const services=await ServiceCollection.find().toArray();
+
+            // step2:get the booking of that day
+            const query={date:date};
+            const bookings=await bookingCollection.find(query).toArray()
+            res.send(bookings);
+
+        })
+
+
+
+
+        app.post("/booking",async(req,res)=>{
+            const book=req.body;
+            const query={treatment:book.treatment,patient:book.patient,date:book.date};
+            const exist=await bookingCollection.findOne(query);
+            if(exist){
+                return res.send({success:false,booking:exist});
+            }
+            const booking=await bookingCollection.insertOne(book);
+            res.send({success:true,booking});
+
+        })
     }
     finally{
 
