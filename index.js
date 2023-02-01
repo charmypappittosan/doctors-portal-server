@@ -31,16 +31,33 @@ async function run(){
             res.send(services);
         })
 
+
+        // this is not the proper way to query
+        // after learning more about mongodb. use aggregate lookup,pipeline, match, group
+
         app.get("/available",async(req,res)=>{
-            const date=req.query.date ||'January 14, 2023';
+            const date=req.query.date;
 
             // step:1:get all services
             const services=await ServiceCollection.find().toArray();
 
             // step2:get the booking of that day
             const query={date:date};
-            const bookings=await bookingCollection.find(query).toArray()
-            res.send(bookings);
+            const bookings=await bookingCollection.find(query).toArray();
+
+            // step3:for each survice find bookings for the service
+            services.forEach(service=>{
+            //    step4:find bookings for that service
+             const serviceBookings = bookings.filter(
+               (book) => book.treatment === service.Name
+             );
+            //  step5:select slot for the service bookings
+             const bookedslots = serviceBookings.map((book) => book.slot);
+            //  step6:select those slots that are not in booked slot
+             const available = service.slot.filter((s) => !bookedslots.includes(s));
+             service.slot = available;
+            })
+            res.send(services);
 
         })
 
@@ -49,10 +66,10 @@ async function run(){
 
         app.post("/booking",async(req,res)=>{
             const book=req.body;
-            const query={treatment:book.treatment,patient:book.patient,date:book.date};
+            const query={treatment:book.treatment,patient:book.patient,date:book.date,slot:book.slot};
             const exist=await bookingCollection.findOne(query);
             if(exist){
-                return res.send({success:false,booking:exist});
+                return res.send({success:false,book:exist});
             }
             const booking=await bookingCollection.insertOne(book);
             res.send({success:true,booking});
