@@ -97,3 +97,4 @@ app.get("/", (req, res) => {
 app.listen(port,()=>{
     console.log('doctor uncle sorry',port);
 })
+module.exports=app;
